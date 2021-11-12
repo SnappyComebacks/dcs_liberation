@@ -151,6 +151,16 @@ class FlightPlan:
         return self.flight.unit_type.fuel_consumption.cruise
 
     @property
+    def dismiss_havcap_at_index(self) -> int:
+        assert len(self.waypoints) > 1
+        return len(self.waypoints) - 1
+
+    @property
+    def dismiss_havcap_waypoint(self) -> FlightWaypoint:
+        path = list(self.iter_waypoints())
+        return path[self.dismiss_havcap_at_index]
+
+    @property
     def tot_waypoint(self) -> Optional[FlightWaypoint]:
         """The waypoint that is associated with the package TOT, or None.
 
@@ -499,6 +509,54 @@ class PatrollingFlightPlan(FlightPlan):
 
 
 @dataclass(frozen=True)
+class HavCapFlightPlan(FlightPlan):
+    takeoff: FlightWaypoint
+    nav_to: List[FlightWaypoint]
+    nav_from: List[FlightWaypoint]
+    havcap: FlightWaypoint
+    land: FlightWaypoint
+    divert: Optional[FlightWaypoint]
+    bullseye: FlightWaypoint
+
+    # Protected flight's id
+    escorted_group_id: str
+
+    # Formation offset from protected flight
+    altitude_offset: Distance
+    x_offset: Distance
+    y_offset: Distance
+
+    # Index of last havcap waypoint of protected flight
+    last_escorted_waypoint: Optional[int]
+
+    def iter_waypoints(self) -> Iterator[FlightWaypoint]:
+        yield self.takeoff
+        yield from self.nav_to
+        yield self.havcap
+        yield from self.nav_from
+        yield self.land
+        if self.divert is not None:
+            yield self.divert
+        yield self.bullseye
+
+    def tot_for_waypoint(self, waypoint: FlightWaypoint) -> Optional[timedelta]:
+        # Needs the flight plan from the escorted flight.
+        return None
+
+    def depart_time_for_waypoint(self, waypoint: FlightWaypoint) -> Optional[timedelta]:
+        # Needs the flight plan from the escorted flight.
+        return None
+
+    # @property
+    # def package_speed_waypoints(self) -> Set[FlightWaypoint]:
+    #     return {self.havcap}
+
+    @property
+    def tot_waypoint(self) -> Optional[FlightWaypoint]:
+        return self.havcap
+
+
+@dataclass(frozen=True)
 class BarCapFlightPlan(PatrollingFlightPlan):
     takeoff: FlightWaypoint
     land: FlightWaypoint
@@ -827,6 +885,18 @@ class AwacsFlightPlan(LoiterFlightPlan):
     def mission_departure_time(self) -> timedelta:
         return self.push_time
 
+    @property
+    def dismiss_havcap_at_index(self) -> int:
+        dismiss_waypoint: FlightWaypoint
+
+        if len(self.nav_from) > 0:
+            dismiss_waypoint = self.nav_from[-1]
+        else:
+            dismiss_waypoint = self.land
+        plan_waypoints = list(self.iter_waypoints())
+
+        return plan_waypoints.index(dismiss_waypoint)
+
 
 @dataclass(frozen=True)
 class RefuelingFlightPlan(PatrollingFlightPlan):
@@ -845,6 +915,18 @@ class RefuelingFlightPlan(PatrollingFlightPlan):
         if self.divert is not None:
             yield self.divert
         yield self.bullseye
+
+    @property
+    def dismiss_havcap_at_index(self) -> int:
+        dismiss_waypoint: FlightWaypoint
+
+        if len(self.nav_from) > 0:
+            dismiss_waypoint = self.nav_from[-1]
+        else:
+            dismiss_waypoint = self.land
+        plan_waypoints = list(self.iter_waypoints())
+
+        return plan_waypoints.index(dismiss_waypoint)
 
 
 @dataclass(frozen=True)
@@ -888,6 +970,18 @@ class AirliftFlightPlan(FlightPlan):
     def mission_departure_time(self) -> timedelta:
         return self.package.time_over_target
 
+    @property
+    def dismiss_havcap_at_index(self) -> int:
+        dismiss_waypoint: FlightWaypoint
+
+        if len(self.nav_to_home) > 0:
+            dismiss_waypoint = self.nav_to_home[-1]
+        else:
+            dismiss_waypoint = self.land
+        plan_waypoints = list(self.iter_waypoints())
+
+        return plan_waypoints.index(dismiss_waypoint)
+
 
 @dataclass(frozen=True)
 class FerryFlightPlan(FlightPlan):
@@ -920,6 +1014,18 @@ class FerryFlightPlan(FlightPlan):
     @property
     def mission_departure_time(self) -> timedelta:
         return self.package.time_over_target
+
+    @property
+    def dismiss_havcap_at_index(self) -> int:
+        dismiss_waypoint: FlightWaypoint
+
+        if len(self.nav_to_destination) > 0:
+            dismiss_waypoint = self.nav_to_destination[-1]
+        else:
+            dismiss_waypoint = self.land
+        plan_waypoints = list(self.iter_waypoints())
+
+        return plan_waypoints.index(dismiss_waypoint)
 
 
 @dataclass(frozen=True)
@@ -1046,6 +1152,8 @@ class FlightPlanBuilder:
             return self.generate_refueling_racetrack(flight)
         elif task == FlightType.FERRY:
             return self.generate_ferry(flight)
+        elif task == FlightType.HAVCAP:
+            return self.generate_havcap(flight)
         raise PlanningError(f"{task} flight plan generation not implemented")
 
     def regenerate_package_waypoints(self) -> None:
@@ -1456,6 +1564,59 @@ class FlightPlanBuilder:
 
         return location.position.point_from_heading(
             orbit_heading.degrees, orbit_distance.meters
+        )
+
+    def generate_havcap(self, flight: Flight) -> HavCapFlightPlan:
+        """Generate a HAVCAP flight plan to follow a high value asset."""
+
+        """Args:
+            flight: The flight to generate the flight plan for.
+        """
+        hav_flight: Optional[Flight] = self.package.most_valuable_flight
+        assert hav_flight is not None
+
+        escorted_group_id = "Bob"
+        # escorted_group_id = hav_flight.custom_name
+        # assert escorted_group_id is not None
+
+        havcap_start = hav_flight.flight_plan.waypoints[1]
+        havcap_end = hav_flight.flight_plan.dismiss_havcap_waypoint
+        last_waypoint_index = hav_flight.flight_plan.dismiss_havcap_at_index
+
+        altitude_is_agl = flight.unit_type.dcs_unit_type.helicopter
+        altitude = (
+            feet(1500)
+            if altitude_is_agl
+            else flight.unit_type.preferred_patrol_altitude
+        )
+
+        # Hopefully only using one Havcap flight
+        x_offset = Distance.from_feet(200)
+        y_offset = Distance.from_feet(350)
+        altitude_offset = Distance.from_feet(500)
+
+        builder = WaypointBuilder(flight, self.coalition)
+        havcap = builder.havcap(havcap_start.position)
+
+        return HavCapFlightPlan(
+            package=self.package,
+            flight=flight,
+            takeoff=builder.takeoff(flight.departure),
+            nav_to=builder.nav_path(
+                flight.departure.position, havcap_start.position, altitude
+            ),
+            havcap=havcap,
+            nav_from=builder.nav_path(
+                havcap_end.position, flight.arrival.position, altitude
+            ),
+            land=builder.land(flight.arrival),
+            divert=builder.divert(flight.divert),
+            bullseye=builder.bullseye(),
+            escorted_group_id=escorted_group_id,
+            last_escorted_waypoint=last_waypoint_index,
+            x_offset=x_offset,
+            y_offset=y_offset,
+            altitude_offset=altitude_offset,
         )
 
     def generate_tarcap(self, flight: Flight) -> TarCapFlightPlan:

@@ -35,6 +35,7 @@ class AircraftBehavior:
         if self.task in [
             FlightType.BARCAP,
             FlightType.TARCAP,
+            FlightType.HAVCAP,
             FlightType.INTERCEPTION,
         ]:
             self.configure_cap(group, flight)

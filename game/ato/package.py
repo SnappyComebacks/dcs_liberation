@@ -61,6 +61,14 @@ class Package:
             return None
         return min(speeds)
 
+    @property
+    def most_valuable_flight(self) -> Optional[Flight]:
+        primary_task = self.primary_task
+        for flight in self.flights:
+            if flight.flight_type == primary_task:
+                return flight
+        return None
+
     # TODO: Should depend on the type of escort.
     # SEAD might be able to leave before CAP.
     @property
@@ -160,6 +168,7 @@ class Package:
             FlightType.REFUELING,
             FlightType.SWEEP,
             FlightType.ESCORT,
+            FlightType.HAVCAP,
         ]
         for task in tasks_by_priority:
             if flight_counts[task]:

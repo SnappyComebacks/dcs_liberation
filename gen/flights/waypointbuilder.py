@@ -199,6 +199,20 @@ class WaypointBuilder:
         waypoint.name = "JOIN"
         return waypoint
 
+    def havcap(self, position: Point) -> FlightWaypoint:
+        waypoint = FlightWaypoint(
+            FlightWaypointType.HAVCAP,
+            position.x,
+            position.y,
+            meters(80) if self.is_helo else self.doctrine.ingress_altitude,
+        )
+        if self.is_helo:
+            waypoint.alt_type = "RADIO"
+        waypoint.pretty_name = "HAVCAP"
+        waypoint.description = "Protect a high value flight"
+        waypoint.name = "HAVCAP"
+        return waypoint
+
     def split(self, position: Point) -> FlightWaypoint:
         waypoint = FlightWaypoint(
             FlightWaypointType.SPLIT,

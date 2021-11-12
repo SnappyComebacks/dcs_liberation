@@ -38,6 +38,7 @@ class FlightType(Enum):
 
     TARCAP = "TARCAP"
     BARCAP = "BARCAP"
+    HAVCAP = "HAVCAP"
     CAS = "CAS"
     INTERCEPTION = "Intercept"
     STRIKE = "Strike"

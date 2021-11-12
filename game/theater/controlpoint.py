@@ -910,6 +910,7 @@ class Airfield(ControlPoint):
                 # TODO: FlightType.INTERCEPTION
                 # TODO: FlightType.LOGISTICS
             ]
+        yield FlightType.HAVCAP
 
     @property
     def total_aircraft_parking(self) -> int:
