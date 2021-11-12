@@ -518,6 +518,9 @@ class HavCapFlightPlan(FlightPlan):
     divert: Optional[FlightWaypoint]
     bullseye: FlightWaypoint
 
+    # The escorted flight
+    escorted: Flight
+
     # Protected flight's id
     escorted_group_id: str
 
@@ -540,11 +543,13 @@ class HavCapFlightPlan(FlightPlan):
         yield self.bullseye
 
     def tot_for_waypoint(self, waypoint: FlightWaypoint) -> Optional[timedelta]:
-        # Needs the flight plan from the escorted flight.
+        if waypoint == self.havcap:
+            escort_start = self.escorted.flight_plan.request_escort_at()
+            if escort_start is not None:
+                return self.escorted.flight_plan.tot_for_waypoint(escort_start)
         return None
 
     def depart_time_for_waypoint(self, waypoint: FlightWaypoint) -> Optional[timedelta]:
-        # Needs the flight plan from the escorted flight.
         return None
 
     # @property
@@ -1601,6 +1606,7 @@ class FlightPlanBuilder:
         return HavCapFlightPlan(
             package=self.package,
             flight=flight,
+            escorted=hav_flight,
             takeoff=builder.takeoff(flight.departure),
             nav_to=builder.nav_path(
                 flight.departure.position, havcap_start.position, altitude
