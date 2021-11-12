@@ -1,10 +1,13 @@
 import logging
+import math
+from typing import Type
 from dcs.mapping import Point
 from dcs.point import MovingPoint
-from dcs.task import CAPTaskAction, Follow
+from dcs.task import EngageTargets, Follow, Targets
 from game.missiongenerator.aircraft.waypoints.pydcswaypointbuilder import (
     PydcsWaypointBuilder,
 )
+from game.utils import Distance
 from gen.flights.flightplan import HavCapFlightPlan
 
 
@@ -17,7 +20,19 @@ class HavcapPointBuilder(PydcsWaypointBuilder):
             )
             return super().add_tasks(waypoint)
         else:
-            waypoint.add_task(CAPTaskAction())
+
+            engage_range = Distance.from_nautical_miles(40)
+            planes = Targets.All.Air.Planes
+            engage_targets = [
+                Type[planes.Fighters],
+                Type[planes.MultiroleFighters],
+                Type[Targets.All.Air.Helicopters],
+            ]
+            search_and_engage = EngageTargets(
+                max_distance=math.floor(engage_range.nautical_miles),
+                targets=engage_targets,
+            )
+            waypoint.add_task(search_and_engage)
 
             flight_plan = self.flight.flight_plan
 

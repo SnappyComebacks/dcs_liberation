@@ -15,6 +15,7 @@ from game.ato import Flight, FlightWaypoint
 from game.ato.flightstate import InFlight, WaitingForStart
 from game.ato.flightwaypointtype import FlightWaypointType
 from game.ato.starttype import StartType
+from game.missiongenerator.aircraft.waypoints.havcap import HavcapPointBuilder
 from game.missiongenerator.airsupport import AirSupport
 from game.settings import Settings
 from game.theater import ControlPointType
@@ -116,6 +117,7 @@ class WaypointGenerator:
     def builder_for_waypoint(self, waypoint: FlightWaypoint) -> PydcsWaypointBuilder:
         builders = {
             FlightWaypointType.DROP_OFF: CargoStopBuilder,
+            FlightWaypointType.HAVCAP: HavcapPointBuilder,
             FlightWaypointType.INGRESS_BAI: BaiIngressBuilder,
             FlightWaypointType.INGRESS_CAS: CasIngressBuilder,
             FlightWaypointType.INGRESS_DEAD: DeadIngressBuilder,
