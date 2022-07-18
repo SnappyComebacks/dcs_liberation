@@ -150,7 +150,7 @@ class PresetLocations:
     ammunition_depots: List[PresetLocation] = field(default_factory=list)
 
     #: Locations of stationary armor groups.
-    armor_groups: List[PresetLocation] = field(default_factory=list)
+    battle_positions: List[PresetLocation] = field(default_factory=list)
 
     #: Locations of garrisons.
     garrisons: List[PresetLocation] = field(default_factory=list)

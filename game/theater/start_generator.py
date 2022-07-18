@@ -278,7 +278,7 @@ class AirbaseGroundObjectGenerator(ControlPointGroundObjectGenerator):
 
     def generate_ground_points(self) -> None:
         """Generate ground objects and AA sites for the control point."""
-        self.generate_armor_groups()
+        self.generate_battle_positions()
         self.generate_garrisons()
         self.generate_iads()
         self.generate_scenery_sites()
@@ -289,8 +289,8 @@ class AirbaseGroundObjectGenerator(ControlPointGroundObjectGenerator):
         self.generate_missile_sites()
         self.generate_coastal_sites()
 
-    def generate_armor_groups(self) -> None:
-        for position in self.control_point.preset_locations.armor_groups:
+    def generate_battle_positions(self) -> None:
+        for position in self.control_point.preset_locations.battle_positions:
             unit_group = self.armed_forces.random_group_for_task(GroupTask.BASE_DEFENSE)
             if not unit_group:
                 logging.error(f"{self.faction_name} has no ForceGroup for Armor")

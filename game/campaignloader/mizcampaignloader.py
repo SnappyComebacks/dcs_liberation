@@ -87,7 +87,7 @@ class MizCampaignLoader:
 
     EWR_UNIT_TYPE = AirDefence._1L13_EWR.id
 
-    ARMOR_GROUP_UNIT_TYPE = Armor.M_1_Abrams.id
+    BATTLE_POSITION_UNIT_TYPE = Armor.M_1_Abrams.id
 
     GARRISON_GROUP_UNIT_TYPE = Unarmed.Bedford_MWD.id
 
@@ -211,9 +211,9 @@ class MizCampaignLoader:
                 yield group
 
     @property
-    def armor_groups(self) -> Iterator[VehicleGroup]:
+    def battle_positions(self) -> Iterator[VehicleGroup]:
         for group in itertools.chain(self.blue.vehicle_group, self.red.vehicle_group):
-            if group.units[0].type in self.ARMOR_GROUP_UNIT_TYPE:
+            if group.units[0].type in self.BATTLE_POSITION_UNIT_TYPE:
                 yield group
 
     @property
@@ -410,9 +410,9 @@ class MizCampaignLoader:
             closest, distance = self.objective_info(group)
             closest.preset_locations.ewrs.append(PresetLocation.from_group(group))
 
-        for group in self.armor_groups:
+        for group in self.battle_positions:
             closest, distance = self.objective_info(group)
-            closest.preset_locations.armor_groups.append(
+            closest.preset_locations.battle_positions.append(
                 PresetLocation.from_group(group)
             )
 
