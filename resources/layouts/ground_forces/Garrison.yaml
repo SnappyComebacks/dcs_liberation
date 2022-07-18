@@ -1,0 +1,28 @@
+name: Garrison Group
+generic: true
+tasks:
+  - BaseDefense
+groups:
+  - Armor Group:
+    - name: Garrison Group 0
+      unit_count:
+        - 0
+      unit_classes:
+        - APC
+        - ATGM
+        - IFV
+        - Tank
+        - AAA
+        - SHORAD
+    - name: Garrison Group 1
+      optional: true
+      unit_count:
+        - 0
+      unit_classes:
+        - APC
+        - ATGM
+        - IFV
+        - Tank
+        - AAA
+        - SHORAD
+layout_file: resources/layouts/ground_forces/ground_forces.miz
