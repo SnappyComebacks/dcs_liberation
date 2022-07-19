@@ -6,6 +6,7 @@ from game.commander.tasks.compound.attackairinfrastructure import (
 )
 from game.commander.tasks.compound.attackbuildings import AttackBuildings
 from game.commander.tasks.compound.attackbattlepositions import AttackBattlePositions
+from game.commander.tasks.compound.attackgarrisons import AttackGarrisons
 from game.commander.tasks.compound.capturebases import CaptureBases
 from game.commander.tasks.compound.defendbases import DefendBases
 from game.commander.tasks.compound.degradeiads import DegradeIads
@@ -29,6 +30,7 @@ class PlanNextAction(CompoundTask[TheaterState]):
         yield [DefendBases()]
         yield [InterdictReinforcements()]
         yield [AttackBattlePositions()]
+        yield [AttackGarrisons()]
         yield [AttackAirInfrastructure(self.aircraft_cold_start)]
         yield [AttackBuildings()]
         yield [DegradeIads()]

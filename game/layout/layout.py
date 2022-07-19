@@ -15,6 +15,7 @@ from game.data.units import UnitClass
 from game.theater.iadsnetwork.iadsrole import IadsRole
 from game.theater.presetlocation import PresetLocation
 from game.theater.theatergroundobject import (
+    GarrisonGroundObject,
     IadsBuildingGroundObject,
     SamGroundObject,
     EwrGroundObject,
@@ -315,4 +316,13 @@ class GroundForceLayout(TgoLayout):
         location: PresetLocation,
         control_point: ControlPoint,
     ) -> TheaterGroundObject:
-        return VehicleGroupGroundObject(name, location, control_point)
+        if not GroupTask.GARRISON:
+            return VehicleGroupGroundObject(name, location, control_point)
+        else:
+            # TODO: Capacity size shouldn't be randomly chosen.
+            return GarrisonGroundObject(
+                name,
+                location,
+                control_point,
+                random.choice(random.choice(self.groups).unit_groups).max_size,
+            )

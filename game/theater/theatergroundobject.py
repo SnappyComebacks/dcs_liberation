@@ -8,6 +8,7 @@ from typing import Any, Iterator, List, Optional, TYPE_CHECKING
 from dcs.mapping import Point
 
 from shapely.geometry import Point as ShapelyPoint
+from game.ground_forces.ai_ground_planner import CombatGroup
 
 from game.sidc import (
     Entity,
@@ -45,6 +46,7 @@ NAME_BY_CATEGORY = {
     "farp": "FARP",
     "fob": "FOB",
     "fuel": "Fuel depot",
+    "garrison": "Garrison",
     "missile": "Missile site",
     "oil": "Oil platform",
     "power": "Power plant",
@@ -207,6 +209,10 @@ class TheaterGroundObject(MissionTarget, SidcDescribable, ABC):
         return point.buffer(threat_range.meters)
 
     @property
+    def is_garrison(self) -> bool:
+        return self.category == "garrison"
+
+    @property
     def is_ammo_depot(self) -> bool:
         return self.category == "ammo"
 
@@ -292,6 +298,8 @@ class BuildingGroundObject(TheaterGroundObject):
             entity = LandInstallationEntity.TENTED_CAMP
         elif self.category == "ammo":
             entity = LandInstallationEntity.AMMUNITION_CACHE
+        elif self.category == "armor":
+            entity = LandInstallationEntity.MILITARY_INFRASTRUCTURE
         elif self.category == "commandcenter":
             entity = LandInstallationEntity.MILITARY_INFRASTRUCTURE
         elif self.category == "comms":
@@ -304,6 +312,8 @@ class BuildingGroundObject(TheaterGroundObject):
             entity = LandInstallationEntity.HELICOPTER_LANDING_SITE
         elif self.category == "fuel":
             entity = LandInstallationEntity.WAREHOUSE_STORAGE_FACILITY
+        elif self.category == "garrison":
+            entity = LandInstallationEntity.MILITARY_INFRASTRUCTURE
         elif self.category == "oil":
             entity = LandInstallationEntity.PETROLEUM_FACILITY
         elif self.category == "power":
@@ -574,6 +584,55 @@ class VehicleGroupGroundObject(TheaterGroundObject):
     @property
     def should_head_to_conflict(self) -> bool:
         return True
+
+
+class GarrisonGroundObject(TheaterGroundObject):
+    def __init__(
+        self,
+        name: str,
+        location: PresetLocation,
+        control_point: ControlPoint,
+        capacity: int,
+    ) -> None:
+        super().__init__(
+            name=name,
+            category="garrison",
+            location=location,
+            control_point=control_point,
+            sea_object=False,
+        )
+        self.capacity = capacity
+
+    @property
+    def symbol_set_and_entity(self) -> tuple[SymbolSet, Entity]:
+        return (
+            SymbolSet.LAND_INSTALLATIONS,
+            LandUnitEntity.ARMOR_ARMORED_MECHANIZED_SELF_PROPELLED_TRACKED,
+        )
+
+    @property
+    def capturable(self) -> bool:
+        return True
+
+    @property
+    def purchasable(self) -> bool:
+        return False
+
+    @property
+    def should_head_to_conflict(self) -> bool:
+        return False
+
+    @property
+    def group_capacity(self) -> int:
+        return self.capacity
+
+    def add_combat_groups(self, units: List[CombatGroup]) -> None:
+        return
+        # self.groups.clear()
+        # for unit in units:
+        # TODO: Figure this out.
+        # group: TheaterGroup = []
+        # self.groups.append(group)
 
 
 class EwrGroundObject(IadsGroundObject):

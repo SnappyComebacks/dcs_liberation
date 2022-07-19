@@ -15,6 +15,7 @@ from game.theater import (
 )
 from game.theater.theatergroundobject import (
     BuildingGroundObject,
+    GarrisonGroundObject,
     IadsGroundObject,
     NavalGroundObject,
     IadsBuildingGroundObject,
@@ -59,6 +60,15 @@ class ObjectiveFinder:
                 if ground_object.is_dead:
                     continue
 
+                yield ground_object
+
+    def enemy_garrisons(self) -> Iterator[GarrisonGroundObject]:
+        for cp in self.enemy_control_points():
+            for ground_object in cp.ground_objects:
+                if not isinstance(ground_object, GarrisonGroundObject):
+                    continue
+                if ground_object.is_dead:
+                    continue
                 yield ground_object
 
     def threatening_ships(self) -> Iterator[NavalGroundObject]:

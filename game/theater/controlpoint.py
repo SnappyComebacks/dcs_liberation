@@ -43,6 +43,7 @@ from dcs.ships import (
 )
 
 from game.ato.closestairfields import ObjectiveDistanceCache
+from game.ground_forces.ai_ground_planner import CombatGroup
 from game.ground_forces.combat_stance import CombatStance
 from game.point_with_heading import PointWithHeading
 from game.runways import RunwayAssigner, RunwayData
@@ -62,6 +63,7 @@ from .base import Base
 from .frontline import FrontLine
 from .missiontarget import MissionTarget
 from .theatergroundobject import (
+    GarrisonGroundObject,
     GenericCarrierGroundObject,
     IadsGroundObject,
     TheaterGroundObject,
@@ -592,6 +594,21 @@ class ControlPoint(MissionTarget, SidcDescribable, ABC):
         """
         ...
 
+    def store_reserve_units_in_garrisons(self, units: List[CombatGroup]) -> None:
+        garrisons = self.garrison_ground_objects
+        unit_count = len(units)
+        for garrison in garrisons:
+            assert isinstance(garrison, GarrisonGroundObject)
+            garrison_capacity = garrison.group_capacity
+            remaining_unit_count = unit_count - garrison_capacity
+            if remaining_unit_count > 0:
+                garrison.add_combat_groups(units[0:garrison_capacity])
+                units.remove[0:garrison_capacity]
+            else:
+                garrison.add_combat_groups(units)
+                break
+        return
+
     def convoy_origin_for(self, destination: ControlPoint) -> Point:
         return self.convoy_route_to(destination)[0]
 
@@ -988,6 +1005,12 @@ class ControlPoint(MissionTarget, SidcDescribable, ABC):
     @property
     def frontline_unit_count_limit(self) -> int:
         return self.front_line_capacity_with(self.active_ammo_depots_count)
+
+    @property
+    def garrison_ground_objects(self) -> Iterator[TheaterGroundObject]:
+        for tgo in self.connected_objectives:
+            if tgo.is_garrison:
+                yield tgo
 
     @property
     def all_ammo_depots(self) -> Iterator[TheaterGroundObject]:
