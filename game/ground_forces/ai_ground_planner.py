@@ -159,6 +159,4 @@ class GroundPlanner:
                     self.reserve.append(group)
                 collection.append(group)
 
-            if remaining_available_frontline_units == 0:
-                self.cp.store_reserve_units_in_garrisons(self.reserve)
-                break
+        self.cp.store_reserve_units_in_garrisons(self.reserve)
