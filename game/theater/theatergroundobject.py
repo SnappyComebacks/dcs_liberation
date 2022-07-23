@@ -612,7 +612,7 @@ class GarrisonGroundObject(TheaterGroundObject):
 
     @property
     def capturable(self) -> bool:
-        return True
+        return False
 
     @property
     def purchasable(self) -> bool:
