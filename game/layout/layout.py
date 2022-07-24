@@ -1,10 +1,8 @@
 from __future__ import annotations
-from collections import defaultdict
 
-import logging
 import random
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterator, Type, Optional
+from typing import TYPE_CHECKING, Dict, Iterator, List, Type, Optional
 
 from dcs import Point
 from dcs.unit import Unit
@@ -29,7 +27,6 @@ from game.theater.theatergroundobject import (
     IadsGroundObject,
 )
 from game.theater.theatergroup import TheaterUnit
-from game.utils import Heading
 
 if TYPE_CHECKING:
     from game.factions.faction import Faction
@@ -164,6 +161,29 @@ class TgoLayoutUnitGroup:
             TheaterUnit.from_template(i, unit_type, self.layout_units[i], go)
             for i in range(amount)
         ]
+
+    def generate_units_mixed_types(
+        self, go: TheaterGroundObject, units: Dict[Type[DcsUnitType], int]
+    ) -> list[TheaterUnit]:
+        """Generate units of the given type and amount and amount for the TgoLayoutGroup"""
+        amount = sum(units.values())
+        if amount > len(self.layout_units):
+            raise LayoutException(
+                f"{self.name} has incorrect unit count to generate units for {go.group_name}"
+            )
+
+        count = 0
+        theater_units = []
+        for unit_type in units.keys():
+            assert unit_type is not None
+            num_units = units.get(unit_type)
+            assert num_units is not None
+            for i in range(num_units):
+                theater_units.append(
+                    TheaterUnit.from_template(i, unit_type, self.layout_units[i], go)
+                )
+                count = count + 1
+        return theater_units
 
 
 class TgoLayout:

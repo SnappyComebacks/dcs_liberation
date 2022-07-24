@@ -597,15 +597,17 @@ class ControlPoint(MissionTarget, SidcDescribable, ABC):
     def store_reserve_units_in_garrisons(self, units: List[CombatGroup]) -> None:
         garrisons = self.garrison_ground_objects
         unit_count = len(units)
+
         for garrison in garrisons:
             assert isinstance(garrison, GarrisonGroundObject)
+            group_id = self.coalition.game.next_group_id()
             garrison_capacity = garrison.group_capacity
             remaining_unit_count = unit_count - garrison_capacity
             if remaining_unit_count > 0:
-                garrison.add_combat_groups(units[0:garrison_capacity])
-                units.remove[0:garrison_capacity]
+                garrison.set_combat_groups(group_id, units[0:garrison_capacity])
+                units = units[garrison_capacity:-1]
             else:
-                garrison.add_combat_groups(units)
+                garrison.set_combat_groups(group_id, units)
                 break
         return
 

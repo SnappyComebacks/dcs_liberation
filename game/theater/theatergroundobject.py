@@ -3,12 +3,14 @@ from __future__ import annotations
 import itertools
 import uuid
 from abc import ABC
-from typing import Any, Iterator, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, Iterator, List, Optional, TYPE_CHECKING, Type
 
 from dcs.mapping import Point
+from dcs.unittype import UnitType as DcsUnitType
 
 from shapely.geometry import Point as ShapelyPoint
 from game.ground_forces.ai_ground_planner import CombatGroup
+from game.layout import LAYOUTS
 
 from game.sidc import (
     Entity,
@@ -626,13 +628,26 @@ class GarrisonGroundObject(TheaterGroundObject):
     def group_capacity(self) -> int:
         return self.capacity
 
-    def add_combat_groups(self, units: List[CombatGroup]) -> None:
+    def set_combat_groups(
+        self, group_id: int, combat_groups: List[CombatGroup]
+    ) -> None:
+        layout = LAYOUTS.by_name("Garrison Group")
+        unit_groups = layout.all_unit_groups
+
+        unit_dict: Dict[Type[DcsUnitType], int] = dict()
+
+        for group in combat_groups:
+            unit_dict[group.unit_type.dcs_unit_type] = group.size
+
+        for unit_group in unit_groups:
+            if unit_group.name.find("barrier") != -1:
+                theater_units = unit_group.generate_units_mixed_types(self, unit_dict)
+                theater_group = TheaterGroup.from_template(
+                    group_id, self.group_name, theater_units, self
+                )
+                self.groups = [theater_group]
+                break
         return
-        # self.groups.clear()
-        # for unit in units:
-        # TODO: Figure this out.
-        # group: TheaterGroup = []
-        # self.groups.append(group)
 
 
 class EwrGroundObject(IadsGroundObject):
