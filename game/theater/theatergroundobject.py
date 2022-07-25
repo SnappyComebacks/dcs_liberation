@@ -10,7 +10,6 @@ from dcs.unittype import UnitType as DcsUnitType
 
 from shapely.geometry import Point as ShapelyPoint
 from game.ground_forces.ai_ground_planner import CombatGroup
-from game.layout import LAYOUTS
 
 from game.sidc import (
     Entity,
@@ -631,7 +630,10 @@ class GarrisonGroundObject(TheaterGroundObject):
     def set_combat_groups(
         self, group_id: int, combat_groups: List[CombatGroup]
     ) -> None:
-        layout = LAYOUTS.by_name("Garrison Group")
+        # Circular dependency mitigation between layout and theatergroundobject
+        from game.layout import LAYOUTS
+
+        layout = LAYOUTS.by_name("Garrison Group A")
         unit_groups = layout.all_unit_groups
 
         unit_dict: Dict[Type[DcsUnitType], int] = dict()
