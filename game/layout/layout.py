@@ -336,13 +336,24 @@ class GroundForceLayout(TgoLayout):
         location: PresetLocation,
         control_point: ControlPoint,
     ) -> TheaterGroundObject:
-        if not GroupTask.GARRISON:
+        if not GroupTask.GARRISON in self.tasks:
             return VehicleGroupGroundObject(name, location, control_point)
         else:
-            # TODO: Capacity size shouldn't be randomly chosen.
+            # TODO: Capacity could be determined better.
+            capacity = 0
+            # valid_groups = [group for group in self.groups if group.group_name.find("Garrison") != -1]
+            valid_groups = []
+            for group in self.groups:
+                if group.group_name.find("Garrison") != -1:
+                    valid_groups.append(group)
+            chosen_group = valid_groups[0]
+            for unit_group in chosen_group.unit_groups:
+                if unit_group.name.find("Barrier") == -1:
+                    capacity = unit_group.group_size
+                    break
             return GarrisonGroundObject(
                 name,
                 location,
                 control_point,
-                random.choice(random.choice(self.groups).unit_groups).max_size,
+                capacity,
             )
