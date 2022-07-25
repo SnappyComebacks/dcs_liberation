@@ -1,7 +1,7 @@
 name: Garrison Group A
 generic: true
 tasks:
-  - BaseDefense
+  - Garrison
 groups:
   - Armor Group:
     - name: Garrison Group 1
