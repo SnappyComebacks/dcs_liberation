@@ -19,6 +19,7 @@ DEFAULT_AVAILABLE_BUILDINGS = [
     "ware",
     "farp",
     "derrick",
+    "garrison",
 ]
 
 WW2_FREE = ["fuel", "ware"]
