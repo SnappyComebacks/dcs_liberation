@@ -313,8 +313,6 @@ class BuildingGroundObject(TheaterGroundObject):
             entity = LandInstallationEntity.HELICOPTER_LANDING_SITE
         elif self.category == "fuel":
             entity = LandInstallationEntity.WAREHOUSE_STORAGE_FACILITY
-        elif self.category == "garrison":
-            entity = LandInstallationEntity.MILITARY_INFRASTRUCTURE
         elif self.category == "oil":
             entity = LandInstallationEntity.PETROLEUM_FACILITY
         elif self.category == "power":
