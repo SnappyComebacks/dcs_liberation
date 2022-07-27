@@ -3,7 +3,7 @@ generic: true
 tasks:
   - Garrison
 groups:
-  - Armor Group:
+  - Garrison:
     - name: Garrison Group 1
       unit_count:
         - 0
