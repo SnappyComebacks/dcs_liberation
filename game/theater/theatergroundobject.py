@@ -3,11 +3,13 @@ from __future__ import annotations
 import itertools
 import uuid
 from abc import ABC
-from typing import Any, Iterator, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, Iterator, List, Optional, TYPE_CHECKING, Type
 
 from dcs.mapping import Point
+from dcs.unittype import UnitType as DcsUnitType
 
 from shapely.geometry import Point as ShapelyPoint
+from game.ground_forces.ai_ground_planner import CombatGroup
 
 from game.sidc import (
     Entity,
@@ -45,6 +47,7 @@ NAME_BY_CATEGORY = {
     "farp": "FARP",
     "fob": "FOB",
     "fuel": "Fuel depot",
+    "garrison": "Garrison",
     "missile": "Missile site",
     "oil": "Oil platform",
     "power": "Power plant",
@@ -211,6 +214,10 @@ class TheaterGroundObject(MissionTarget, SidcDescribable, ABC):
         return self.category == "ammo"
 
     @property
+    def is_garrison(self) -> bool:
+        return self.category == "garrison"
+
+    @property
     def is_factory(self) -> bool:
         return self.category == "factory"
 
@@ -304,6 +311,8 @@ class BuildingGroundObject(TheaterGroundObject):
             entity = LandInstallationEntity.HELICOPTER_LANDING_SITE
         elif self.category == "fuel":
             entity = LandInstallationEntity.WAREHOUSE_STORAGE_FACILITY
+        elif self.category == "armor":
+            entity = LandInstallationEntity.MILITARY_INFRASTRUCTURE
         elif self.category == "oil":
             entity = LandInstallationEntity.PETROLEUM_FACILITY
         elif self.category == "power":
@@ -574,6 +583,73 @@ class VehicleGroupGroundObject(TheaterGroundObject):
     @property
     def should_head_to_conflict(self) -> bool:
         return True
+
+
+class GarrisonGroundObject(TheaterGroundObject):
+    def __init__(
+        self,
+        name: str,
+        location: PresetLocation,
+        control_point: ControlPoint,
+        capacity: int,
+    ) -> None:
+        super().__init__(
+            name=name,
+            category="garrison",
+            location=location,
+            control_point=control_point,
+            sea_object=False,
+        )
+        self.capacity = capacity
+
+    @property
+    def symbol_set_and_entity(self) -> tuple[SymbolSet, Entity]:
+        return (
+            SymbolSet.LAND_INSTALLATIONS,
+            LandUnitEntity.ARMOR_ARMORED_MECHANIZED_SELF_PROPELLED_TRACKED,
+        )
+
+    @property
+    def capturable(self) -> bool:
+        return False
+
+    @property
+    def purchasable(self) -> bool:
+        return False
+
+    @property
+    def should_head_to_conflict(self) -> bool:
+        return False
+
+    @property
+    def group_capacity(self) -> int:
+        return self.capacity
+
+    def set_combat_groups(
+        self, group_id: int, combat_groups: List[CombatGroup]
+    ) -> None:
+        # Circular dependency mitigation between layout and theatergroundobject
+        from game.layout import LAYOUTS
+
+        layout = LAYOUTS.by_name("Garrison Group A")
+        unit_groups = layout.all_unit_groups
+
+        unit_dict: Dict[Type[DcsUnitType], int] = dict()
+
+        for group in combat_groups:
+            unit_dict[group.unit_type.dcs_unit_type] = group.size
+
+        for unit_group in unit_groups:
+            if unit_group.name.find("barrier") == -1:
+
+                theater_units = unit_group.generate_units_mixed_types(self, unit_dict)
+
+                ground_group: TheaterGroup = TheaterGroup.from_template(
+                    group_id, self.group_name, theater_units, self
+                )
+                self.groups = [ground_group]
+                break
+        return
 
 
 class EwrGroundObject(IadsGroundObject):

@@ -43,6 +43,7 @@ from dcs.ships import (
 )
 
 from game.ato.closestairfields import ObjectiveDistanceCache
+from game.ground_forces.ai_ground_planner import CombatGroup
 from game.ground_forces.combat_stance import CombatStance
 from game.point_with_heading import PointWithHeading
 from game.runways import RunwayAssigner, RunwayData
@@ -62,6 +63,7 @@ from .base import Base
 from .frontline import FrontLine
 from .missiontarget import MissionTarget
 from .theatergroundobject import (
+    GarrisonGroundObject,
     GenericCarrierGroundObject,
     IadsGroundObject,
     TheaterGroundObject,
@@ -151,6 +153,9 @@ class PresetLocations:
 
     #: Locations of stationary armor groups.
     armor_groups: List[PresetLocation] = field(default_factory=list)
+
+    #: Locations of garrisons.
+    garrisons: List[PresetLocation] = field(default_factory=list)
 
     #: Locations of skynet specific groups
     iads_connection_node: List[PresetLocation] = field(default_factory=list)
@@ -589,6 +594,50 @@ class ControlPoint(MissionTarget, SidcDescribable, ABC):
         """
         ...
 
+    def store_reserve_units_in_garrisons(
+        self, combat_groups: List[CombatGroup]
+    ) -> None:
+        """
+        Store undeployed combat groups in Garrisons.  If there is are too many units for garrisons ignore the excess.
+        TODO:  Do something with the excess?
+        """
+        unstored_combat_groups = combat_groups
+        garrisons = self.garrison_ground_objects
+        for garrison in garrisons:
+            assert isinstance(garrison, GarrisonGroundObject)
+            garrison.groups.clear()
+
+            if len(unstored_combat_groups) > 0:
+                group_id = self.coalition.game.next_group_id()
+                remaining_garrison_capacity = garrison.group_capacity
+
+                groups_for_garrison: List[CombatGroup] = []
+                for group in unstored_combat_groups:
+                    take = group
+                    take_amount = take.size
+                    if take_amount > remaining_garrison_capacity:
+                        # Not enough space for entire group.
+                        leftover_amount = take_amount - remaining_garrison_capacity
+                        take_amount = remaining_garrison_capacity
+                        take.size = take_amount
+
+                        leftover_group = CombatGroup(
+                            take.role, take.unit_type, leftover_amount
+                        )
+                        unstored_combat_groups.append(leftover_group)
+
+                    groups_for_garrison.append(take)
+                    remaining_garrison_capacity -= take_amount
+
+                    if remaining_garrison_capacity == 0:
+                        break
+
+                garrison.set_combat_groups(group_id, groups_for_garrison)
+
+                for group in groups_for_garrison:
+                    unstored_combat_groups.remove(group)
+        return
+
     def convoy_origin_for(self, destination: ControlPoint) -> Point:
         return self.convoy_route_to(destination)[0]
 
@@ -985,6 +1034,12 @@ class ControlPoint(MissionTarget, SidcDescribable, ABC):
     @property
     def frontline_unit_count_limit(self) -> int:
         return self.front_line_capacity_with(self.active_ammo_depots_count)
+
+    @property
+    def garrison_ground_objects(self) -> Iterator[TheaterGroundObject]:
+        for tgo in self.connected_objectives:
+            if tgo.is_garrison:
+                yield tgo
 
     @property
     def all_ammo_depots(self) -> Iterator[TheaterGroundObject]:

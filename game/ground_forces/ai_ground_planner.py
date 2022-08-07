@@ -98,6 +98,8 @@ class GroundPlanner:
         # https://github.com/dcs-liberation/dcs_liberation/issues/1417
         group_size_choice = GROUP_SIZES_BY_COMBAT_STANCE[CombatStance.DEFENSIVE]
 
+        garrison_groups: List[CombatGroup] = []
+
         # Create combat groups and assign them randomly to each enemy CP
         for unit_type in self.cp.base.armor:
             unit_class = unit_type.unit_class
@@ -131,25 +133,29 @@ class GroundPlanner:
                 )
                 continue
 
-            available = self.cp.base.armor[unit_type]
+            amount_available = self.cp.base.armor[unit_type]
+            amount_undeployable = 0
 
-            if available > remaining_available_frontline_units:
-                available = remaining_available_frontline_units
+            if amount_available > remaining_available_frontline_units:
+                amount_undeployable = (
+                    amount_available - remaining_available_frontline_units
+                )
+                amount_available = remaining_available_frontline_units
 
-            remaining_available_frontline_units -= available
+            remaining_available_frontline_units -= amount_available
 
-            while available > 0:
+            while amount_available > 0:
 
                 if role == CombatGroupRole.SHORAD:
                     count = 1
                 else:
                     count = random.choice(group_size_choice)
-                    if count > available:
-                        if available >= 2:
+                    if count > amount_available:
+                        if amount_available >= 2:
                             count = 2
                         else:
                             count = 1
-                available -= count
+                amount_available -= count
 
                 group = CombatGroup(role, unit_type, count)
                 if len(self.connected_enemy_cp) > 0:
@@ -159,5 +165,10 @@ class GroundPlanner:
                     self.reserve.append(group)
                 collection.append(group)
 
-            if remaining_available_frontline_units == 0:
-                break
+            if amount_undeployable > 0:
+                garrison_groups.append(
+                    CombatGroup(role, unit_type, amount_undeployable)
+                )
+
+        if len(garrison_groups) > 0:
+            self.cp.store_reserve_units_in_garrisons(garrison_groups)

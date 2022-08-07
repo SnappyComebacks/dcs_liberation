@@ -17,6 +17,7 @@ from game.settings import Settings
 from game.theater import ConflictTheater, ControlPoint, FrontLine, MissionTarget
 from game.theater.theatergroundobject import (
     BuildingGroundObject,
+    GarrisonGroundObject,
     IadsGroundObject,
     NavalGroundObject,
     TheaterGroundObject,
@@ -57,6 +58,7 @@ class TheaterState(WorldState["TheaterState"]):
     enemy_shipping: list[CargoShip]
     enemy_ships: list[NavalGroundObject]
     enemy_battle_positions: dict[ControlPoint, BattlePositions]
+    enemy_garrisons: list[GarrisonGroundObject]
     oca_targets: list[ControlPoint]
     strike_targets: list[TheaterGroundObject]
     enemy_barcaps: list[ControlPoint]
@@ -90,8 +92,16 @@ class TheaterState(WorldState["TheaterState"]):
     def has_battle_position(self, target: VehicleGroupGroundObject) -> bool:
         return target in self.enemy_battle_positions[target.control_point]
 
-    def eliminate_battle_position(self, target: VehicleGroupGroundObject) -> None:
-        self.enemy_battle_positions[target.control_point].eliminate(target)
+    def has_garrisons(self, target: GarrisonGroundObject) -> bool:
+        return target in self.enemy_garrisons
+
+    def eliminate_bai_position(
+        self, target: VehicleGroupGroundObject | GarrisonGroundObject
+    ) -> None:
+        if isinstance(target, VehicleGroupGroundObject):
+            self.enemy_battle_positions[target.control_point].eliminate(target)
+        else:
+            self.enemy_garrisons.remove(target)
 
     def ammo_dumps_at(
         self, control_point: ControlPoint
@@ -123,6 +133,7 @@ class TheaterState(WorldState["TheaterState"]):
                 cp: dataclasses.replace(g)
                 for cp, g in self.enemy_battle_positions.items()
             },
+            enemy_garrisons=list(self.enemy_garrisons),
             oca_targets=list(self.oca_targets),
             strike_targets=list(self.strike_targets),
             enemy_barcaps=list(self.enemy_barcaps),
@@ -176,6 +187,7 @@ class TheaterState(WorldState["TheaterState"]):
                 cp: BattlePositions.for_control_point(cp)
                 for cp in ordered_capturable_points
             },
+            enemy_garrisons=list(finder.enemy_garrisons()),
             oca_targets=list(finder.oca_targets(min_aircraft=20)),
             strike_targets=list(finder.strike_targets()),
             enemy_barcaps=list(game.theater.control_points_for(not player)),

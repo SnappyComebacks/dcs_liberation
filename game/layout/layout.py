@@ -1,10 +1,8 @@
 from __future__ import annotations
-from collections import defaultdict
 
-import logging
 import random
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterator, Type, Optional
+from typing import TYPE_CHECKING, Dict, Iterator, List, Type, Optional
 
 from dcs import Point
 from dcs.unit import Unit
@@ -15,6 +13,7 @@ from game.data.units import UnitClass
 from game.theater.iadsnetwork.iadsrole import IadsRole
 from game.theater.presetlocation import PresetLocation
 from game.theater.theatergroundobject import (
+    GarrisonGroundObject,
     IadsBuildingGroundObject,
     SamGroundObject,
     EwrGroundObject,
@@ -28,7 +27,6 @@ from game.theater.theatergroundobject import (
     IadsGroundObject,
 )
 from game.theater.theatergroup import TheaterUnit
-from game.utils import Heading
 
 if TYPE_CHECKING:
     from game.factions.faction import Faction
@@ -163,6 +161,32 @@ class TgoLayoutUnitGroup:
             TheaterUnit.from_template(i, unit_type, self.layout_units[i], go)
             for i in range(amount)
         ]
+
+    def generate_units_mixed_types(
+        self, go: TheaterGroundObject, units: Dict[Type[DcsUnitType], int]
+    ) -> list[TheaterUnit]:
+        """Generate units of the given type and amount and amount for the TgoLayoutGroup"""
+        amount = sum(units.values())
+        if amount > len(self.layout_units):
+            raise LayoutException(
+                f"{self.name} has incorrect unit count to generate units for {go.group_name}"
+            )
+
+        position = 0
+        theater_units = []
+        for unit_type in units.keys():
+            assert unit_type is not None
+            num_units = units.get(unit_type)
+            assert num_units is not None
+            for i in range(num_units):
+                theater_units.append(
+                    TheaterUnit.from_template(
+                        i, unit_type, self.layout_units[position], go
+                    )
+                )
+                position = position + 1
+
+        return theater_units
 
 
 class TgoLayout:
@@ -315,4 +339,25 @@ class GroundForceLayout(TgoLayout):
         location: PresetLocation,
         control_point: ControlPoint,
     ) -> TheaterGroundObject:
-        return VehicleGroupGroundObject(name, location, control_point)
+        if not GroupTask.GARRISON in self.tasks:
+            return VehicleGroupGroundObject(name, location, control_point)
+        else:
+            # TODO: Capacity could be determined better.
+            capacity = 0
+            # valid_groups = [group for group in self.groups if group.group_name.find("Garrison") != -1]
+            valid_groups: List[TgoLayoutGroup] = []
+            for group in self.groups:
+                if group.group_name.find("Garrison") != -1:
+                    valid_groups.append(group)
+            assert len(valid_groups) == 1
+            chosen_group = valid_groups[0]
+            for unit_group in chosen_group.unit_groups:
+                if unit_group.name.find("Barrier") == -1:
+                    capacity = unit_group.max_size
+                    break
+            return GarrisonGroundObject(
+                name,
+                location,
+                control_point,
+                capacity,
+            )

@@ -279,6 +279,7 @@ class AirbaseGroundObjectGenerator(ControlPointGroundObjectGenerator):
     def generate_ground_points(self) -> None:
         """Generate ground objects and AA sites for the control point."""
         self.generate_armor_groups()
+        self.generate_garrisons()
         self.generate_iads()
         self.generate_scenery_sites()
         self.generate_strike_targets()
@@ -295,6 +296,10 @@ class AirbaseGroundObjectGenerator(ControlPointGroundObjectGenerator):
                 logging.error(f"{self.faction_name} has no ForceGroup for Armor")
                 return
             self.generate_ground_object_from_group(unit_group, position)
+
+    def generate_garrisons(self) -> None:
+        for position in self.control_point.preset_locations.garrisons:
+            self.generate_building_at(GroupTask.GARRISON, position)
 
     def generate_aa(self) -> None:
         presets = self.control_point.preset_locations
